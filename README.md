@@ -28,6 +28,23 @@ Ao abrir um cliente específico, o operador vê: status da conexão, sinal ópti
 
 ![Ficha do dispositivo](screenshots/dispositivo.png)
 
+<details>
+<summary>Ver as outras abas da ficha do dispositivo (WAN/Internet, Rede Local, Wireless)</summary>
+
+**WAN/Internet** — credenciais PPPoE, status da conexão, VLAN, IPv6, consumo de banda:
+
+![Aba WAN/Internet](screenshots/dispositivo_wan.png)
+
+**Rede Local** — endereçamento IP, servidor DHCP, DNS:
+
+![Aba Rede Local](screenshots/dispositivo_lan.png)
+
+**Wireless** — rádios 2.4GHz/5GHz e até 8 redes Wi-Fi (SSIDs) configuráveis por dispositivo:
+
+![Aba Wireless](screenshots/dispositivo_wifi.png)
+
+</details>
+
 ### 3. Diagnóstico remoto
 Ferramentas de ping/traceroute/teste de velocidade disparadas a partir do próprio roteador do cliente (não do servidor), pra isolar se o problema é da rede do cliente, do link até a central, ou de algo externo.
 
@@ -48,10 +65,52 @@ Toda interação de suporte (chat/humano) é registrada e analisada por IA, sina
 
 ![Auditoria de atendimento](screenshots/auditoria.png)
 
+<details>
+<summary>Ver as outras abas da Auditoria (Técnico, Experiência, Visão Geral, Ranking de Atendentes, Ranking de Clientes, Especialista)</summary>
+
+**Técnico** — diagnóstico de problemas técnicos recorrentes (qualidade, quedas, lentidão):
+
+![Aba Técnico](screenshots/auditoria_tecnico.png)
+
+**Experiência** — satisfação do cliente (CX): esforço, NPS/CSAT, reincidência, tempo de fila:
+
+![Aba Experiência](screenshots/auditoria_experiencia.png)
+
+**Visão Geral** — listagem consolidada de todos os atendimentos, com filtro por atendente e busca por nome/CPF/protocolo:
+
+![Aba Visão Geral](screenshots/auditoria_visaogeral.png)
+
+**Ranking de Atendentes** — produtividade e indicadores de risco (churn, desconto, irritação) por colaborador:
+
+![Aba Ranking de Atendentes](screenshots/auditoria_ranking_atendentes.png)
+
+**Ranking de Clientes** — clientes que mais entram em contato no período (top chamadores recorrentes):
+
+![Aba Ranking de Clientes](screenshots/auditoria_ranking_clientes.png)
+
+**Especialista** — busca dirigida de um cliente específico por nome/telefone com filtros de setor e nível:
+
+![Aba Especialista](screenshots/auditoria_especialista.png)
+
+</details>
+
 ### 7. Casos de risco
 A parte mais avançada do sistema: cruza sinais de atendimento (avaliação ruim, cliente irritado) com histórico de chamados de suporte/financeiro pra priorizar quem precisa de atenção — de triagem ampla até casos formais abertos automaticamente quando os critérios batem juntos, com resumo gerado por IA.
 
 ![Casos de risco](screenshots/casos.png)
+
+<details>
+<summary>Ver as outras abas de Casos (Casos IA, Painel de Churn)</summary>
+
+**Casos (IA)** — casos formais abertos automaticamente, com resumo e diagnóstico gerado por IA, status de validação e reincidência:
+
+![Aba Casos IA](screenshots/casos_ia.png)
+
+**Painel de Churn** — métricas de eficácia do próprio motor de detecção (recall, precisão, lead time de antecedência) e lista de cancelamentos recentes, comparando quem tinha caso aberto antes de cancelar:
+
+![Aba Painel de Churn](screenshots/casos_churn.png)
+
+</details>
 
 ### 8. Teste de conexão do cliente
 Link enviado ao cliente final (sem necessidade de login) que roda um teste de velocidade completo no navegador dele — não no roteador — pra medir a experiência real de internet do lado de quem usa.
