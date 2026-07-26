@@ -21,42 +21,42 @@ Por trás da tela, o sistema fala o protocolo de gerência remota de equipamento
 ### 1. Dashboard geral
 Visão consolidada da base: total de dispositivos online/offline, distribuição por fabricante/modelo, alertas recentes. É a tela de entrada de quem começa o turno.
 
-> 📸 *[espaço reservado — captura do dashboard]*
+![Dashboard geral](screenshots/dashboard.png)
 
 ### 2. Ficha do dispositivo
 Ao abrir um cliente específico, o operador vê: status da conexão, sinal óptico, IP/PPPoE, redes Wi-Fi configuradas (e pode trocar nome/senha na hora), dispositivos conectados no momento, e ações rápidas (reiniciar, sincronizar, atualizar firmware). Praticamente todo atendimento de suporte técnico gira em torno dessa tela.
 
-> 📸 *[espaço reservado — captura da ficha do dispositivo]*
+![Ficha do dispositivo](screenshots/dispositivo.png)
 
 ### 3. Diagnóstico remoto
-Ferramentas de ping/traceroute disparadas a partir do próprio roteador do cliente (não do servidor), pra isolar se o problema é da rede do cliente, do link até a central, ou de algo externo.
+Ferramentas de ping/traceroute/teste de velocidade disparadas a partir do próprio roteador do cliente (não do servidor), pra isolar se o problema é da rede do cliente, do link até a central, ou de algo externo.
 
-> 📸 *[espaço reservado — captura do diagnóstico]*
+![Diagnóstico remoto](screenshots/diagnostico.png)
 
 ### 4. Quarentena / monitoramento ativo
-Motor que observa continuamente sinal e conectividade dos clientes e sinaliza automaticamente quem está com queda recorrente — antes que o cliente precise ligar reclamando.
+Motor que observa continuamente sinal e conectividade dos clientes e sinaliza automaticamente quem está com queda recorrente — antes que o cliente precise ligar reclamando. (Fila vazia no momento do print — sinal de que a base está saudável.)
 
-> 📸 *[espaço reservado — captura da quarentena]*
+![Quarentena](screenshots/quarentena.png)
 
 ### 5. Saúde do cliente
 Um placar por cliente que combina qualidade de sinal, estabilidade da conexão e histórico de quarentena num único indicador — pra priorizar quem precisa de atenção proativa.
 
-> 📸 *[espaço reservado — captura da tela de saúde do cliente]*
+![Saúde do cliente](screenshots/saude_cliente.png)
 
 ### 6. Auditoria de atendimento
-Toda interação de suporte (chat/humano) é registrada e fica pesquisável aqui, com o nível de satisfação do cliente e a avaliação do atendimento.
+Toda interação de suporte (chat/humano) é registrada e analisada por IA, sinalizando padrões como pedido de desconto, risco de churn ou insatisfação — com um resumo automático de cada atendimento.
 
-> 📸 *[espaço reservado — captura da auditoria]*
+![Auditoria de atendimento](screenshots/auditoria.png)
 
-### 7. Casos de risco (IA)
-A parte mais avançada do sistema: quando um cliente acumula chamados de suporte recorrentes **e** teve atendimento mal avaliado num período recente, um caso é aberto automaticamente — sem nenhum humano precisar reparar no padrão manualmente. Uma IA lê o histórico e escreve um resumo com sugestão de ação, pronto pra quem for tratar o caso.
+### 7. Casos de risco
+A parte mais avançada do sistema: cruza sinais de atendimento (avaliação ruim, cliente irritado) com histórico de chamados de suporte/financeiro pra priorizar quem precisa de atenção — de triagem ampla até casos formais abertos automaticamente quando os critérios batem juntos, com resumo gerado por IA.
 
-> 📸 *[espaço reservado — captura da tela de casos]*
+![Casos de risco](screenshots/casos.png)
 
-### 8. Portal do cliente final
-Uma versão simplificada, separada do painel interno, onde o próprio cliente acessa por um link pessoal e consulta status da sua conexão sem precisar ligar pro suporte.
+### 8. Teste de conexão do cliente
+Link enviado ao cliente final (sem necessidade de login) que roda um teste de velocidade completo no navegador dele — não no roteador — pra medir a experiência real de internet do lado de quem usa.
 
-> 📸 *[espaço reservado — captura do portal do cliente]*
+![Teste de conexão do cliente](screenshots/teste_cliente.png)
 
 ---
 
@@ -82,4 +82,4 @@ Alguns problemas reais de escala e confiabilidade que precisaram ser diagnostica
 
 ---
 
-*Sistema em produção ativa, atendendo clientes reais. Este repositório contém apenas material de apresentação para fins de portfólio — sem código-fonte, credenciais ou dados de clientes. Capturas de tela serão adicionadas com dados sensíveis (nome de cliente, CPF, nome de atendente) devidamente censurados.*
+*Sistema em produção ativa, atendendo clientes reais. Este repositório contém apenas material de apresentação para fins de portfólio — sem código-fonte, credenciais ou dados de clientes. Nas capturas de tela, dados sensíveis (nome de cliente, CPF/CNPJ, login) foram censurados antes da publicação.*
