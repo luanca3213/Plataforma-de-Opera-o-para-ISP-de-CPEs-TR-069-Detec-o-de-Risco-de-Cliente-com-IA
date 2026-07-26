@@ -15,6 +15,7 @@
 ## Índice
 
 - [O que é](#o-que-é)
+- [Como funciona, por trás da tela](#como-funciona-por-trás-da-tela)
 - [Números da operação](#números-da-operação)
 - [Tour pelas telas](#tour-pelas-telas)
 - [Desafios técnicos por trás das telas](#desafios-técnicos-por-trás-das-telas)
@@ -31,6 +32,23 @@ Um painel único onde a equipe de suporte:
 - Monitora ativamente sinal e conectividade, sinalizando automaticamente quem está com queda recorrente antes que o cliente precise ligar reclamando.
 
 Por trás da tela, o sistema fala o protocolo de gerência remota de equipamentos de telecom (**TR-069/CWMP**) com milhares de dispositivos de diferentes fabricantes, cada um com seu próprio "dialeto" de parâmetros — e esconde essa complexidade do operador.
+
+---
+
+## Como funciona, por trás da tela
+
+Sem entrar em código — toda ação (clicada no painel ou disparada por um cron) passa pelo mesmo caminho, coordenado por um **orquestrador** central:
+
+![Arquitetura do painel TR-069](architecture.svg)
+
+1. **Disparo da ação** — vem do clique de um operador no painel (ex.: "sincronizar", "reiniciar") ou de um cron job (sincronização em massa, motor de quarentena).
+2. **Orquestração** — um componente central recebe o dispositivo-alvo e a ação pedida, e comanda o resto do fluxo: descobrir quem é o dispositivo, carregar o comportamento certo pra ele, executar, e por fim atualizar o status — sem que o resto do sistema precise saber os detalhes de cada etapa.
+3. **Identificação do dispositivo** — o ID que o servidor de gerência manda de volta nem sempre bate exatamente com o que está salvo (encodings diferentes, sufixos, formatos por fabricante). Essa etapa resolve **quem** é o dispositivo por trás do ID bruto.
+4. **Carregamento do perfil** — cada combinação de fabricante+modelo tem um perfil próprio: onde fica cada dado relevante (sinal, Wi-Fi, WAN), e quais ações esse modelo específico sabe executar. Se não existir perfil dedicado, o sistema cai num comportamento genérico.
+5. **Execução via TR-069/CWMP** — o comando de verdade sai daqui, através do servidor de gerência remota, até o roteador do cliente. É a única etapa que efetivamente conversa com o equipamento físico.
+6. **Atualização do espelho local** — a resposta do dispositivo atualiza um banco relacional local (status, sinal, IP, Wi-Fi), pra o painel nunca precisar reconsultar a árvore inteira do dispositivo só pra mostrar uma tela.
+
+Essa separação é o que permite adicionar suporte a um **novo modelo de CPE só criando um novo perfil** — sem tocar no núcleo do sistema.
 
 ---
 

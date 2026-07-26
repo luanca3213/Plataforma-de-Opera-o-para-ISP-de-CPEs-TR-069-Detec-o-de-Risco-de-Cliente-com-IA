@@ -15,6 +15,7 @@
 ## Table of Contents
 
 - [What it is](#what-it-is)
+- [How it works, behind the screen](#how-it-works-behind-the-screen)
 - [Operation at a glance](#operation-at-a-glance)
 - [Screen tour](#screen-tour)
 - [Technical challenges behind the screens](#technical-challenges-behind-the-screens)
@@ -31,6 +32,23 @@ A single panel where the support team:
 - Actively monitors signal and connectivity, automatically flagging customers with recurring drops before they have to call in.
 
 Under the hood, the system speaks the telecom remote-management protocol (**TR-069/CWMP**) with thousands of devices from different manufacturers, each with its own parameter "dialect" — and hides that complexity from the operator.
+
+---
+
+## How it works, behind the screen
+
+No code here — every action (clicked in the panel or fired by a cron job) goes through the same path, coordinated by a central **orchestrator**:
+
+![TR-069 panel architecture](architecture.svg)
+
+1. **Trigger** — comes from an operator clicking something in the panel ("sync", "reboot") or from a cron job (bulk sync, quarantine engine).
+2. **Orchestration** — a central component receives the target device and the requested action, and drives the rest of the flow: figure out who the device is, load the right behavior for it, execute, and finally update status — without the rest of the system needing to know the details of each step.
+3. **Device identification** — the ID the management server reports back doesn't always match exactly what's stored (different encodings, suffixes, per-manufacturer formats). This step resolves **who** the device actually is behind the raw ID.
+4. **Profile loading** — each manufacturer+model combination has its own profile: where each relevant piece of data lives (signal, Wi-Fi, WAN), and which actions that specific model supports. If there's no dedicated profile, the system falls back to generic behavior.
+5. **Execution via TR-069/CWMP** — the actual command leaves here, through the remote management server, to the customer's router. This is the only step that actually talks to the physical device.
+6. **Local mirror update** — the device's response updates a local relational database (status, signal, IP, Wi-Fi), so the panel never needs to re-query the device's entire parameter tree just to render a screen.
+
+This separation is what lets a **new CPE model be supported just by adding a new profile** — without touching the system's core.
 
 ---
 
