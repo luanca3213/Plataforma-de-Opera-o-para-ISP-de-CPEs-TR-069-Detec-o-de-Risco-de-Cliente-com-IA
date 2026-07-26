@@ -1,9 +1,8 @@
-# Plataforma de Operação para ISP — Gestão de CPEs (TR-069) e Detecção de Risco de Cliente com IA
+# ACS TR-069 — Painel de Gestão de CPEs para ISP
 
 ![PHP](https://img.shields.io/badge/PHP-777BB4?style=flat&logo=php&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat&logo=mongodb&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI%20API-412991?style=flat&logo=openai&logoColor=white)
 ![Alpine.js](https://img.shields.io/badge/Alpine.js-8BC0D0?style=flat&logo=alpinedotjs&logoColor=white)
 ![TR-069](https://img.shields.io/badge/TR--069%2FCWMP-GenieACS-FF6B00?style=flat)
 
@@ -11,7 +10,7 @@
 
 > Sistema **em produção ativa**, usado no dia a dia por uma equipe de NOC/suporte de um provedor de internet regional, atendendo clientes reais. Este repositório é uma apresentação do projeto para portfólio — mostra **o que o sistema faz e como está desenhado**, sem expor código-fonte, credenciais ou dados de clientes.
 >
-> Projeto desenhado e desenvolvido individualmente — da arquitetura (TR-069/CWMP, espelho relacional, pipeline de IA) até a operação em produção.
+> Projeto desenhado e desenvolvido individualmente — da arquitetura (TR-069/CWMP, espelho relacional) até a operação em produção.
 
 ## Índice
 
@@ -29,7 +28,7 @@ Um painel único onde a equipe de suporte:
 
 - Gerencia remotamente os roteadores/ONTs instalados na casa dos clientes (ligar/desligar Wi-Fi, trocar senha, reiniciar, atualizar firmware, diagnosticar sinal), sem precisar de visita técnica para a maioria dos casos.
 - Acompanha em tempo real quais clientes estão online/offline e com que qualidade de sinal.
-- Recebe alertas automáticos quando um cliente entra em padrão de risco (muitos chamados de suporte + atendimento com avaliação ruim), com um resumo gerado por IA já pronto pra quem for atender.
+- Monitora ativamente sinal e conectividade, sinalizando automaticamente quem está com queda recorrente antes que o cliente precise ligar reclamando.
 
 Por trás da tela, o sistema fala o protocolo de gerência remota de equipamentos de telecom (**TR-069/CWMP**) com milhares de dispositivos de diferentes fabricantes, cada um com seu próprio "dialeto" de parâmetros — e esconde essa complexidade do operador.
 
@@ -44,12 +43,7 @@ Dados reais extraídos das próprias capturas de tela abaixo (nada inflado para 
 | CPEs monitorados em tempo real | ~8.100 |
 | Dispositivos online no momento do print | ~5.800 (71% da base) |
 | Dispositivos sinalizados com sinal crítico automaticamente | ~2.600 |
-| Registros de atendimento analisados por IA (auditoria) | 173 mil+ |
-| Ocorrências técnicas diagnosticadas automaticamente | 12,1 mil |
-| Registros de experiência do cliente (CX) processados | 19,2 mil |
-| Clientes com sinal de risco na base de triagem | 17,1 mil |
-| Casos de risco abertos automaticamente (sem intervenção humana) | 35 ativos no momento do print |
-| Antecedência mediana do alerta de risco antes de um cancelamento real | 1,4 dias |
+| Cobertura de dual stack IPv4+IPv6 na base monitorada | 97% |
 
 ---
 
@@ -97,59 +91,7 @@ Um placar por cliente que combina qualidade de sinal, estabilidade da conexão e
 
 ![Saúde do cliente](screenshots/saude_cliente.png)
 
-### 6. Auditoria de atendimento
-Toda interação de suporte (chat/humano) é registrada e analisada por IA, sinalizando padrões como pedido de desconto, risco de churn ou insatisfação — com um resumo automático de cada atendimento.
-
-![Auditoria de atendimento](screenshots/auditoria.png)
-
-<details>
-<summary>Ver as outras abas da Auditoria (Técnico, Experiência, Visão Geral, Ranking de Atendentes, Ranking de Clientes, Especialista)</summary>
-
-**Técnico** — diagnóstico de problemas técnicos recorrentes (qualidade, quedas, lentidão):
-
-![Aba Técnico](screenshots/auditoria_tecnico.png)
-
-**Experiência** — satisfação do cliente (CX): esforço, NPS/CSAT, reincidência, tempo de fila:
-
-![Aba Experiência](screenshots/auditoria_experiencia.png)
-
-**Visão Geral** — listagem consolidada de todos os atendimentos, com filtro por atendente e busca por nome/CPF/protocolo:
-
-![Aba Visão Geral](screenshots/auditoria_visaogeral.png)
-
-**Ranking de Atendentes** — produtividade e indicadores de risco (churn, desconto, irritação) por colaborador:
-
-![Aba Ranking de Atendentes](screenshots/auditoria_ranking_atendentes.png)
-
-**Ranking de Clientes** — clientes que mais entram em contato no período (top chamadores recorrentes):
-
-![Aba Ranking de Clientes](screenshots/auditoria_ranking_clientes.png)
-
-**Especialista** — busca dirigida de um cliente específico por nome/telefone com filtros de setor e nível:
-
-![Aba Especialista](screenshots/auditoria_especialista.png)
-
-</details>
-
-### 7. Casos de risco
-A parte mais avançada do sistema: cruza sinais de atendimento (avaliação ruim, cliente irritado) com histórico de chamados de suporte/financeiro pra priorizar quem precisa de atenção — de triagem ampla até casos formais abertos automaticamente quando os critérios batem juntos, com resumo gerado por IA.
-
-![Casos de risco](screenshots/casos.png)
-
-<details>
-<summary>Ver as outras abas de Casos (Casos IA, Painel de Churn)</summary>
-
-**Casos (IA)** — casos formais abertos automaticamente, com resumo e diagnóstico gerado por IA, status de validação e reincidência:
-
-![Aba Casos IA](screenshots/casos_ia.png)
-
-**Painel de Churn** — métricas de eficácia do próprio motor de detecção (recall, precisão, lead time de antecedência) e lista de cancelamentos recentes, comparando quem tinha caso aberto antes de cancelar:
-
-![Aba Painel de Churn](screenshots/casos_churn.png)
-
-</details>
-
-### 8. Teste de conexão do cliente
+### 6. Teste de conexão do cliente
 Link enviado ao cliente final (sem necessidade de login) que roda um teste de velocidade completo no navegador dele — não no roteador — pra medir a experiência real de internet do lado de quem usa.
 
 ![Teste de conexão do cliente](screenshots/teste_cliente.png)
