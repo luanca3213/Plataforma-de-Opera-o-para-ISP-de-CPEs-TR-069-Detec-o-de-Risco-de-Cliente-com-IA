@@ -1,6 +1,25 @@
 # Plataforma de Operação para ISP — Gestão de CPEs (TR-069) e Detecção de Risco de Cliente com IA
 
+![PHP](https://img.shields.io/badge/PHP-777BB4?style=flat&logo=php&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat&logo=mongodb&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI%20API-412991?style=flat&logo=openai&logoColor=white)
+![Alpine.js](https://img.shields.io/badge/Alpine.js-8BC0D0?style=flat&logo=alpinedotjs&logoColor=white)
+![TR-069](https://img.shields.io/badge/TR--069%2FCWMP-GenieACS-FF6B00?style=flat)
+
+*[English version](README.en.md)*
+
 > Sistema **em produção ativa**, usado no dia a dia por uma equipe de NOC/suporte de um provedor de internet regional, atendendo clientes reais. Este repositório é uma apresentação do projeto para portfólio — mostra **o que o sistema faz e como está desenhado**, sem expor código-fonte, credenciais ou dados de clientes.
+>
+> Projeto desenhado e desenvolvido individualmente — da arquitetura (TR-069/CWMP, espelho relacional, pipeline de IA) até a operação em produção.
+
+## Índice
+
+- [O que é](#o-que-é)
+- [Números da operação](#números-da-operação)
+- [Tour pelas telas](#tour-pelas-telas)
+- [Desafios técnicos por trás das telas](#desafios-técnicos-por-trás-das-telas)
+- [Autor](#autor)
 
 ---
 
@@ -13,6 +32,24 @@ Um painel único onde a equipe de suporte:
 - Recebe alertas automáticos quando um cliente entra em padrão de risco (muitos chamados de suporte + atendimento com avaliação ruim), com um resumo gerado por IA já pronto pra quem for atender.
 
 Por trás da tela, o sistema fala o protocolo de gerência remota de equipamentos de telecom (**TR-069/CWMP**) com milhares de dispositivos de diferentes fabricantes, cada um com seu próprio "dialeto" de parâmetros — e esconde essa complexidade do operador.
+
+---
+
+## Números da operação
+
+Dados reais extraídos das próprias capturas de tela abaixo (nada inflado para o portfólio):
+
+| Métrica | Valor |
+|---|---|
+| CPEs monitorados em tempo real | ~8.100 |
+| Dispositivos online no momento do print | ~5.800 (71% da base) |
+| Dispositivos sinalizados com sinal crítico automaticamente | ~2.600 |
+| Registros de atendimento analisados por IA (auditoria) | 173 mil+ |
+| Ocorrências técnicas diagnosticadas automaticamente | 12,1 mil |
+| Registros de experiência do cliente (CX) processados | 19,2 mil |
+| Clientes com sinal de risco na base de triagem | 17,1 mil |
+| Casos de risco abertos automaticamente (sem intervenção humana) | 35 ativos no momento do print |
+| Antecedência mediana do alerta de risco antes de um cancelamento real | 1,4 dias |
 
 ---
 
@@ -135,9 +172,9 @@ Alguns problemas reais de escala e confiabilidade que precisaram ser diagnostica
 
 ---
 
-## Stack técnica
+## Autor
 
-`PHP` · `MySQL` · `MongoDB` · `TR-069/CWMP (GenieACS)` · `OpenAI API` · `Alpine.js` · `cron / filas assíncronas`
+**Luan Castelhano** — [LinkedIn](https://www.linkedin.com/in/luan-castelhano-797372304/) · [GitHub](https://github.com/luanca3213)
 
 ---
 
