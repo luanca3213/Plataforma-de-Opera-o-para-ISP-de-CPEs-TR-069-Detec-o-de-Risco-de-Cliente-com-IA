@@ -1,89 +1,85 @@
-# ACS TR-069 — Painel de Gestão de CPEs para ISP
+# Plataforma de Operação para ISP — Gestão de CPEs (TR-069) e Detecção de Risco de Cliente com IA
 
-> Sistema **em produção ativa**, atendendo clientes reais de um provedor de internet regional — não é um projeto de estudo. Este repositório documenta a arquitetura e os problemas técnicos reais resolvidos ao longo da operação; o **código-fonte é proprietário e não está publicado aqui**.
-
-## Contexto
-
-Painel de gerência (**ACS — Auto Configuration Server**) para um provedor de internet (ISP) regional, com milhares de CPEs (ONTs/roteadores) de múltiplos fabricantes em campo. O sistema:
-
-- Fala o protocolo **TR-069/CWMP** com os equipamentos dos clientes via **GenieACS**.
-- Mantém um espelho relacional em **MySQL** para consultas rápidas do painel, sem bater na árvore TR-069 completa a cada carregamento de tela.
-- Expõe uma interface web em **PHP** para operadores de NOC/suporte, e um portal separado para o cliente final.
-- Roda um pipeline de detecção de risco de churn (auditoria de atendimento + IA) por cima da mesma base de clientes.
-
-## Arquitetura
-
-```mermaid
-flowchart LR
-    CPE["CPE do cliente\n(ONT/roteador)"] <-->|CWMP/TR-069| GenieCWMP["genieacs-cwmp"]
-    GenieCWMP --> Mongo[(MongoDB)]
-    GenieNBI["genieacs-nbi\nREST"] <--> Mongo
-    GenieFS["genieacs-fs\n(firmware)"] --> Mongo
-
-    PHP["App PHP"] <-->|HTTP NBI| GenieNBI
-    PHP <--> MySQL[(MySQL)]
-
-    Browser["Operador (NOC/Suporte)"] --> PHP
-    ClientBrowser["Cliente final"] --> Portal["Portal do cliente"]
-    Portal --> PHP
-
-    Cron["Cron jobs"] --> PHP
-    Cron --> GenieNBI
-```
-
-### Stack
-
-- **Backend**: PHP (orientado a objetos, sem framework — camada própria de `Core`/`Services`/`Vendors`)
-- **Protocolo de campo**: TR-069/CWMP via GenieACS (`genieacs-cwmp`, `genieacs-nbi`, `genieacs-fs`)
-- **Bancos**: MongoDB (estado vivo por CPE, fonte de verdade do GenieACS) + MySQL (espelho relacional para o painel)
-- **IA**: OpenAI API para triagem de atendimento e geração de resumos de casos de risco
-- **Frontend**: Alpine.js + fetch sobre PHP server-rendered
-- **Orquestração**: cron jobs + workers de fila em PHP puro
-
-## Como o sistema resolve o problema
-
-Um perfil por combinação **fabricante + modelo** de CPE define, de forma declarativa, o mapa de parâmetros TR-069 daquele equipamento (`parameters.json`), quais ações ele suporta (`capabilities.json`) e a regra de descoberta automática (`discovery.json`). Quando o genérico não é suficiente, uma classe PHP dedicada complementa o parsing (ex.: tabelas de host conectado, sinal óptico em path não padronizado).
-
-```
-Browser → API → Discovery::identify()      (acha fabricante/modelo real do CPE)
-             → ProfileLoader::load()         (carrega o perfil certo, ou fallback genérico)
-             → Profile::execute(ação)
-               → GenieConnector             (task no GenieACS via NBI REST)
-             → marca device online + last_seen
-```
-
-Isso permite plugar suporte a um novo modelo de CPE sem tocar no núcleo do sistema — só adicionando os arquivos de perfil (e, quando necessário, uma classe específica).
-
-## Problemas de engenharia resolvidos (destaques)
-
-**1. Backlog de centenas de milhares de tasks travadas no GenieACS**
-O job diário de sincronização em massa disparava `refreshObject('')` (varredura da árvore TR-069 *inteira*) em todo o parque de dispositivos. Em CPEs com árvore grande/volátil isso falhava (`too_many_commits`/`session_terminated`) e, como o GenieACS não expira tasks travadas sozinho, o backlog crescia indefinidamente e competia por orçamento de sessão com dados que realmente importavam. Diagnóstico via log de acesso CWMP + inspeção direta do Mongo; correção em duas frentes: perfis por modelo passaram a atualizar só sub-objetos específicos em vez da árvore inteira, e um cron de limpeza passou a expirar tasks paradas há mais de 1h.
-
-**2. Latência de sincronização manual (~2 min) específica por modelo**
-Clicar "sincronizar" no painel para alguns modelos de CPE demorava muito mais que para outros, mesmo usando o mesmo fluxo. Causa raiz: paths de parâmetros TR-069 incorretos/genéricos para aquele fabricante faziam o sistema cair em fallback caro. Corrigido mapeando os paths reais por modelo e ajustando os *presets/provisions* do GenieACS (janelas de "freshness" diferentes para dado estático vs. dinâmico).
-
-**3. Campos de sinal Wi-Fi enganosos entre fabricantes**
-Em uma família de equipamentos, o campo TR-069 literalmente chamado `RSSI` **não é RSSI real** — é um indicador de barras (0–5). O valor real (dBm) está em outro campo (`SignalStrength`). Cada fabricante também expõe o dado num formato diferente (número puro, string com unidade embutida, campo ausente). Resolvido com normalização por perfil de modelo, documentando explicitamente qual campo usar/evitar em cada um.
-
-**4. `declare({value})` ≠ `declare({object})` no GenieACS**
-Tabelas de tamanho dinâmico (lista de clientes Wi-Fi conectados, por exemplo) ficavam com a *contagem de instâncias* congelada mesmo depois de ajustar a janela de atualização de valor. A causa era não declarar também a atualização do *objeto* (reenumeração da tabela), não só do valor — uma sutileza da API de provisioning do GenieACS que não é óbvia pela documentação.
-
-**5. Guard-rail contra falha em massa de API externa**
-Um pipeline de sincronização com o ERP do provedor interpretou um timeout da API externa como "todos os contratos foram cancelados" e chegou a apagar registros reais de milhares de roteadores antes de ser interrompido. Corrigido com duas salvaguardas: abortar a sincronização inteira se a API externa falhar em qualquer página de resultado, e abortar se mais de 10% da base for marcada como cancelada de uma vez — heurística simples para distinguir "cancelamento em massa real" de "API fora do ar".
-
-**6. Pipeline de detecção de risco de cliente orientado a eventos**
-Fila baseada em trigger de banco (`AFTER INSERT`) + tabela outbox + workers com *claim* atômico (`UPDATE ... WHERE processado=0 LIMIT N` com token único por execução) para avaliar, quase em tempo real, se um cliente cruzou critérios de risco (volume de chamados + sentimento do atendimento). Casos que batem os critérios são enriquecidos com histórico e resumidos por IA, com deduplicação para não abrir o mesmo caso duas vezes e detecção de reincidência.
-
-## Módulos
-
-| Módulo | Função |
-|---|---|
-| Núcleo TR-069 | Descoberta de fabricante/modelo, execução de ações (reboot, config de Wi-Fi/PPPoE/VLAN, firmware) por perfil |
-| Sincronização | Cron jobs incrementais (leve, sem enfileirar comandos) + batch diário (mais caro, sob controle) |
-| Quarentena / saúde do cliente | Motor de monitoramento ativo (sinal, ICMP) com histórico de falhas consecutivas e score agregado |
-| Auditoria & Casos | Pipeline orientado a eventos que cruza atendimento + histórico de suporte e abre casos de risco de churn com resumo gerado por IA |
-| Portal do cliente final | Acesso self-service por token, separado da sessão de operador |
+> Sistema **em produção ativa**, usado no dia a dia por uma equipe de NOC/suporte de um provedor de internet regional, atendendo clientes reais. Este repositório é uma apresentação do projeto para portfólio — mostra **o que o sistema faz e como está desenhado**, sem expor código-fonte, credenciais ou dados de clientes.
 
 ---
 
-*Sistema em produção ativa, atendendo clientes reais. Este repositório contém apenas documentação de arquitetura para fins de portfólio — sem código-fonte, credenciais ou dados de clientes.*
+## O que é
+
+Um painel único onde a equipe de suporte:
+
+- Gerencia remotamente os roteadores/ONTs instalados na casa dos clientes (ligar/desligar Wi-Fi, trocar senha, reiniciar, atualizar firmware, diagnosticar sinal), sem precisar de visita técnica para a maioria dos casos.
+- Acompanha em tempo real quais clientes estão online/offline e com que qualidade de sinal.
+- Recebe alertas automáticos quando um cliente entra em padrão de risco (muitos chamados de suporte + atendimento com avaliação ruim), com um resumo gerado por IA já pronto pra quem for atender.
+
+Por trás da tela, o sistema fala o protocolo de gerência remota de equipamentos de telecom (**TR-069/CWMP**) com milhares de dispositivos de diferentes fabricantes, cada um com seu próprio "dialeto" de parâmetros — e esconde essa complexidade do operador.
+
+---
+
+## Tour pelas telas
+
+### 1. Dashboard geral
+Visão consolidada da base: total de dispositivos online/offline, distribuição por fabricante/modelo, alertas recentes. É a tela de entrada de quem começa o turno.
+
+> 📸 *[espaço reservado — captura do dashboard]*
+
+### 2. Ficha do dispositivo
+Ao abrir um cliente específico, o operador vê: status da conexão, sinal óptico, IP/PPPoE, redes Wi-Fi configuradas (e pode trocar nome/senha na hora), dispositivos conectados no momento, e ações rápidas (reiniciar, sincronizar, atualizar firmware). Praticamente todo atendimento de suporte técnico gira em torno dessa tela.
+
+> 📸 *[espaço reservado — captura da ficha do dispositivo]*
+
+### 3. Diagnóstico remoto
+Ferramentas de ping/traceroute disparadas a partir do próprio roteador do cliente (não do servidor), pra isolar se o problema é da rede do cliente, do link até a central, ou de algo externo.
+
+> 📸 *[espaço reservado — captura do diagnóstico]*
+
+### 4. Quarentena / monitoramento ativo
+Motor que observa continuamente sinal e conectividade dos clientes e sinaliza automaticamente quem está com queda recorrente — antes que o cliente precise ligar reclamando.
+
+> 📸 *[espaço reservado — captura da quarentena]*
+
+### 5. Saúde do cliente
+Um placar por cliente que combina qualidade de sinal, estabilidade da conexão e histórico de quarentena num único indicador — pra priorizar quem precisa de atenção proativa.
+
+> 📸 *[espaço reservado — captura da tela de saúde do cliente]*
+
+### 6. Auditoria de atendimento
+Toda interação de suporte (chat/humano) é registrada e fica pesquisável aqui, com o nível de satisfação do cliente e a avaliação do atendimento.
+
+> 📸 *[espaço reservado — captura da auditoria]*
+
+### 7. Casos de risco (IA)
+A parte mais avançada do sistema: quando um cliente acumula chamados de suporte recorrentes **e** teve atendimento mal avaliado num período recente, um caso é aberto automaticamente — sem nenhum humano precisar reparar no padrão manualmente. Uma IA lê o histórico e escreve um resumo com sugestão de ação, pronto pra quem for tratar o caso.
+
+> 📸 *[espaço reservado — captura da tela de casos]*
+
+### 8. Portal do cliente final
+Uma versão simplificada, separada do painel interno, onde o próprio cliente acessa por um link pessoal e consulta status da sua conexão sem precisar ligar pro suporte.
+
+> 📸 *[espaço reservado — captura do portal do cliente]*
+
+---
+
+## Desafios técnicos por trás das telas
+
+Alguns problemas reais de escala e confiabilidade que precisaram ser diagnosticados e resolvidos ao longo da operação:
+
+- **Fila de comandos entupida.** Uma rotina diária de sincronização em massa disparava, sem perceber, o comando mais caro possível (varrer a árvore inteira de parâmetros) em todo o parque de dispositivos. Em equipamentos com histórico de instabilidade, isso falhava e ficava acumulado pra sempre — o servidor de gerência não descarta comandos travados sozinho. O acúmulo chegou à casa das centenas de milhares. Resolvido trocando a varredura completa por atualizações pontuais só do necessário, mais uma limpeza automática de comandos parados.
+
+- **Lentidão que só acontecia em alguns modelos.** O mesmo clique de "sincronizar" no painel demorava minutos em certos aparelhos e era instantâneo em outros. A causa era que o sistema, pra aqueles modelos, caía num caminho genérico e caro por falta de um mapeamento específico do fabricante. Resolvido mapeando corretamente cada modelo.
+
+- **Indicador de sinal Wi-Fi enganoso.** Em uma linha de equipamentos, o campo do protocolo literalmente chamado "RSSI" não é o sinal real em dBm — é só um indicador de barras (0 a 5), e o dado de verdade está escondido em outro campo com nome diferente. Cada fabricante também formata esse dado de um jeito distinto. Resolvido com normalização por modelo, documentando qual campo é confiável em cada fabricante.
+
+- **Contagem de dispositivos conectados que "travava".** A lista de aparelhos Wi-Fi conectados num roteador às vezes parava de atualizar o número de itens, mesmo com os dados individuais frescos — uma sutileza de como o protocolo de gerência distingue "atualizar um valor já conhecido" de "reconferir quantos itens existem". Resolvido ajustando essa configuração especificamente para tabelas de tamanho variável.
+
+- **Trava de segurança contra falha em cascata.** Uma integração com o sistema de faturamento chegou a interpretar uma instabilidade temporária da API externa como "todos os contratos foram cancelados", e começou a apagar registros de milhares de clientes em produção antes de ser percebido e interrompido manualmente. A correção foi estrutural: a sincronização agora aborta sozinha se a API externa falhar parcialmente, e aborta também se detectar um volume de cancelamento incompatível com o normal — tratando isso como sinal de erro, não de fato real.
+
+---
+
+## Stack técnica
+
+`PHP` · `MySQL` · `MongoDB` · `TR-069/CWMP (GenieACS)` · `OpenAI API` · `Alpine.js` · `cron / filas assíncronas`
+
+---
+
+*Sistema em produção ativa, atendendo clientes reais. Este repositório contém apenas material de apresentação para fins de portfólio — sem código-fonte, credenciais ou dados de clientes. Capturas de tela serão adicionadas com dados sensíveis (nome de cliente, CPF, nome de atendente) devidamente censurados.*
